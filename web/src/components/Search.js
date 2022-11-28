@@ -1,8 +1,9 @@
+import { gql } from '@apollo/client';
 import React, { useState, useEffect } from 'react';
 
 import { useStore } from '../store';
 
-const SEARCH_RESULTS = `
+const SEARCH_RESULTS = gql`
   query searchResults($searchTerm: String!) {
     searchResults: search(term: $searchTerm) {
       type: __typename
@@ -22,7 +23,7 @@ const SEARCH_RESULTS = `
 `;
 
 export default function Search({ searchTerm = null }) {
-  const { setLocalAppState, request, AppLink } = useStore();
+  const { setLocalAppState, query, AppLink } = useStore();
   const [searchResults, setSearchResults] = useState(null);
 
   const handleSearchSubmit = async (event) => {
@@ -36,11 +37,11 @@ export default function Search({ searchTerm = null }) {
 
   useEffect(() => {
     if (searchTerm) {
-      request(SEARCH_RESULTS, { variables: { searchTerm } }).then(({ data }) => {
+      query(SEARCH_RESULTS, { variables: { searchTerm } }).then(({ data }) => {
         setSearchResults(data.searchResults);
       });
     }
-  }, [searchTerm, request]);
+  }, [searchTerm, query]);
 
   return (
     <div>

@@ -21,32 +21,17 @@ export const FULL_TASK_FRAGMENT = `
 const TASK_INFO = `
   query taskInfo($taskId: ID!) {
     taskInfo(id: $taskId) {
-      ...FullTaskData
+      id
+      ...TaskSummary
+      approachList {
+        id
+        ...ApproachFragment
+      }
     }
   }
-  ${FULL_TASK_FRAGMENT}
+  ${TASK_SUMMARY_FRAGMENT}
+  ${APPROACH_FRAGMENT}
 `;
-
-// const mockTaskInfo = {
-//   id: 42,
-//   content: 'Mock Task content',
-//   author: { username: 'mock-author' },
-//   tags: ['tag1', 'tag2'],
-//   approachList: [
-//     {
-//       id: 42,
-//       content: 'Mock Approach content',
-//       author: { username: 'mock-author' },
-//       voteCount: 0,
-//       detailList: [
-//         {
-//           content: 'Mock note...',
-//           category: 'NOTE',
-//         },
-//       ],
-//     },
-//   ],
-// };
 
 export default function TaskPage({ taskId }) {
   const { request, AppLink } = useStore();
@@ -56,21 +41,6 @@ export default function TaskPage({ taskId }) {
 
   useEffect(() => {
     if (!taskInfo) {
-      const TASK_INFO = `
-        query taskInfo($taskId: ID!) {
-          taskInfo(id: $taskId) {
-            id
-            ...TaskSummary
-            approachList {
-              id
-              ...ApproachFragment
-            }
-          }
-        }
-        ${TASK_SUMMARY_FRAGMENT}
-        ${APPROACH_FRAGMENT}
-      `;
-
       request(TASK_INFO, { variables: { taskId } }).then(({ data }) => {
         setTaskInfo(data.taskInfo);
       });
