@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-
+import { gql, useQuery, useMutation } from '@apollo/client';
 import { useStore } from '../store';
 import { APPROACH_FRAGMENT } from './Approach';
 import Errors from './Errors';
 
-const DETAIL_CATEGORIES = `
+const DETAIL_CATEGORIES = gql`
   query getDetailCategories {
     detailCategories: __type(name: "ApproachDetailCategory") {
       enumValues {
@@ -14,7 +14,7 @@ const DETAIL_CATEGORIES = `
   }
 `;
 
-const APPROACH_CREATE = `
+const APPROACH_CREATE = gql`
   mutation approachCreate($taskId: ID!, $input: ApproachInput!) {
     approachCreate(taskId: $taskId, input: $input) {
       errors {
@@ -31,7 +31,6 @@ const APPROACH_CREATE = `
 
 export default function NewApproach({ taskId, onSuccess }) {
   const { useLocalAppState, request } = useStore();
-  const [detailCategories, setDetailCategories] = useState([]);
   const [detailRows, setDetailRows] = useState([0]);
   const [uiErrors, setUIErrors] = useState([]);
 
@@ -44,6 +43,42 @@ export default function NewApproach({ taskId, onSuccess }) {
   }, [detailCategories, request]);
 
   const user = useLocalAppState('user');
+
+  const { error: dcError, loading: dcLoading, data } = useQuery(
+    DETAIL_CATEGORIES,
+  );
+
+  const [createApproach, { error, loading }] = useMutation(
+    APPROACH_CREATE,
+    {
+      update(cache, { data: { approachCreate } }) {
+        if (approachCreate.approach) {
+          onSuccess((taskInfo) => {
+            cache.modify({
+              id: cache.identify(taskInfo),
+              fields: {
+                approachList(currentList) {
+                  return [approachCreate.approach, ...currentList];
+                },
+              },
+            });
+
+            return approachCreate.approach.id;
+          });
+        }
+      },
+    },
+  );
+
+  if (dcLoading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (dcError || error) {
+    return <div className="error">{(dcError || error).message}</div>;
+  }
+
+  const detailCategories = data.detailCategories.enumValues;
 
   if (!user) {
     return (
@@ -65,9 +100,7 @@ export default function NewApproach({ taskId, onSuccess }) {
       content: input[`detail-content-${detailId}`].value,
     }));
 
-    const { data, errors: rootErrors } = await request(
-      APPROACH_CREATE,
-      {
+    const { data, errors: rootErrors } = await createApproach({
         variables: {
           taskId,
           input: {

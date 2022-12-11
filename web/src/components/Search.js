@@ -1,5 +1,5 @@
-import { gql } from '@apollo/client';
-import React, { useState, useEffect } from 'react';
+import { gql, useLazyQuery } from '@apollo/client';
+import React, { useEffect } from 'react';
 
 import { useStore } from '../store';
 
@@ -23,8 +23,21 @@ const SEARCH_RESULTS = gql`
 `;
 
 export default function Search({ searchTerm = null }) {
-  const { setLocalAppState, query, AppLink } = useStore();
-  const [searchResults, setSearchResults] = useState(null);
+  const { setLocalAppState, AppLink } = useStore();
+  const [performSearch, { error, loading, data }] = useLazyQuery(SEARCH_RESULTS, {
+    variables: { searchTerm },
+    skip: !searchTerm, // Performs the query only when there is a searchTerm
+  });
+
+  useEffect(() => {
+    if (searchTerm) {
+      performSearch();
+    }
+  }, [searchTerm, performSearch]);
+
+  if (error) {
+    return <div className="error">{error.message}</div>;
+  }
 
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
@@ -34,14 +47,6 @@ export default function Search({ searchTerm = null }) {
       component: { name: 'Search', props: { searchTerm: term } },
     });
   };
-
-  useEffect(() => {
-    if (searchTerm) {
-      query(SEARCH_RESULTS, { variables: { searchTerm } }).then(({ data }) => {
-        setSearchResults(data.searchResults);
-      });
-    }
-  }, [searchTerm, query]);
 
   return (
     <div>
@@ -64,14 +69,14 @@ export default function Search({ searchTerm = null }) {
           </div>
         </form>
       </div>
-      {searchResults && (
+      {data && data.searchResults && (
         <div>
           <h2>Search Results</h2>
           <div className="y-spaced">
-            {searchResults.length === 0 && (
+            {data.searchResults.length === 0 && (
               <div className="box box-primary">No results</div>
             )}
-            {searchResults.map((item, index) => (
+            {data.searchResults.map((item, index) => (
               <div key={index} className="box box-primary">
                 <AppLink
                   to="TaskPage"

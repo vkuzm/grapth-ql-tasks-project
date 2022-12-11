@@ -1,8 +1,7 @@
-import { gql } from '@apollo/client';
+import { gql, useMutation } from '@apollo/client';
 import React, { useState } from 'react';
-
-import { useStore } from '../store';
 import Errors from './Errors';
+import { useStore } from '../store';
 
 const USER_LOGIN = gql`
   mutation userLogin($input: AuthInput!) {
@@ -20,13 +19,19 @@ const USER_LOGIN = gql`
 `;
 
 export default function Login() {
-  const { mutate, setLocalAppState } = useStore();
+  const { setLocalAppState } = useStore();
   const [uiErrors, setUIErrors] = useState();
+  const [loginUser, { error, loading }] = useMutation(USER_LOGIN);
+  
+  if (error) {
+    return <div className="error">{error.message}</div>;
+  }
+
   const handleLogin = async (event) => {
     event.preventDefault();
     const input = event.target.elements;
 
-    const { data } = await mutate(USER_LOGIN, {
+    const { data } = await loginUser({
       variables: {
         input: {
           username: input.username.value,
